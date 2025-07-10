@@ -12,41 +12,57 @@
       color: #0f0;
       font-family: monospace;
     }
-    /* Full‑screen clickable overlay */
+    /* LOADING SCREEN */
+    #loading-screen {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      background: #000;
+      color: #0f0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      z-index: 2000;
+    }
+
+    /* CAPTCHA OVERLAY */
     #verification-overlay {
       position: fixed;
       top: 0; left: 0;
       width: 100vw; height: 100vh;
-      background: #f7f7f7; /* light gray/white */
-      display: flex;
+      background: #f7f7f7;
+      display: none;
       align-items: center;
       justify-content: center;
       cursor: pointer;
       z-index: 1000;
     }
-    /* Centered CAPTCHA box */
+
     #captcha-box {
       width: 300px;
       max-width: 90vw;
       background: #fff;
       padding: 20px;
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
-      border: 1px solid #ccc; /* neutral border */
+      border: 1px solid #ccc;
       text-align: center;
     }
+
     #captcha-box img {
       width: 100%;
       height: auto;
       display: block;
       margin-bottom: 12px;
     }
+
     #captcha-box p {
       margin: 0;
       font-size: 18px;
       color: #333;
-      line-height: 1.4;
     }
-    /* Video background */
+
+    /* VIDEO BACKGROUND */
     #background-video {
       position: fixed;
       top: 0; left: 0;
@@ -55,7 +71,8 @@
       z-index: 1;
       display: none;
     }
-    /* Info overlay */
+
+    /* INFO OVERLAY */
     #overlay {
       position: fixed;
       top: 0; left: 0;
@@ -70,7 +87,9 @@
       font-size: 24px;
       pointer-events: none;
     }
+
     #overlay span { margin: 5px 0; }
+
     #overlay iframe {
       margin: 10px 0;
       border: 2px solid #0f0;
@@ -82,28 +101,50 @@
 </head>
 <body>
 
-  <!-- Clickable CAPTCHA overlay -->
+  <!-- LOADING SCREEN -->
+  <div id="loading-screen">Loading...</div>
+
+  <!-- CAPTCHA OVERLAY -->
   <div id="verification-overlay">
     <div id="captcha-box">
-      <img src="captcha.jpeg" alt="CAPTCHA Verification">
+      <img id="captcha-img" src="captcha.jpeg" alt="CAPTCHA Verification">
       <p>Verify you are human to continue</p>
     </div>
   </div>
 
-  <!-- Hidden video until verified -->
+  <!-- BACKGROUND VIDEO -->
   <video id="background-video" loop muted playsinline>
     <source src="Comp_1_3.mp4" type="video/mp4">
     Your browser does not support the video tag.
   </video>
 
-  <!-- Info container -->
+  <!-- INFO OVERLAY -->
   <div id="overlay"></div>
 
   <script>
     const verificationOverlay = document.getElementById('verification-overlay');
-    const video               = document.getElementById('background-video');
-    const overlay             = document.getElementById('overlay');
-    const lineDelay           = 400;
+    const captchaImg = document.getElementById('captcha-img');
+    const loadingScreen = document.getElementById('loading-screen');
+    const video = document.getElementById('background-video');
+    const overlay = document.getElementById('overlay');
+    const lineDelay = 400;
+
+    let assetsLoaded = 0;
+
+    function checkReady() {
+      assetsLoaded++;
+      if (assetsLoaded >= 3) {
+        // Wait 1 second buffer
+        setTimeout(() => {
+          loadingScreen.style.display = 'none';
+          verificationOverlay.style.display = 'flex';
+        }, 1000);
+      }
+    }
+
+    window.addEventListener('load', checkReady);
+    captchaImg.onload = checkReady;
+    video.oncanplaythrough = checkReady;
 
     verificationOverlay.addEventListener('click', () => {
       verificationOverlay.style.display = 'none';
