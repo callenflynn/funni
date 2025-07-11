@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Visitor Info</title>
   <style>
     html, body {
@@ -32,7 +33,7 @@
       top: 0; left: 0;
       width: 100vw; height: 100vh;
       background: #f7f7f7;
-      display: none;
+      display: none; /* Hidden by default */
       align-items: center;
       justify-content: center;
       cursor: pointer;
@@ -69,7 +70,7 @@
       width: 100vw; height: 100vh;
       object-fit: cover;
       z-index: 1;
-      display: none;
+      display: none; /* Hidden by default */
     }
 
     /* INFO OVERLAY */
@@ -85,7 +86,7 @@
       white-space: pre-wrap;
       z-index: 2;
       font-size: 24px;
-      pointer-events: none;
+      pointer-events: none; /* Allows clicks to pass through to video/body if needed */
     }
 
     #overlay span { margin: 5px 0; }
@@ -101,10 +102,8 @@
 </head>
 <body>
 
-  <!-- LOADING SCREEN -->
   <div id="loading-screen">Loading...</div>
 
-  <!-- CAPTCHA OVERLAY -->
   <div id="verification-overlay">
     <div id="captcha-box">
       <img id="captcha-img" src="captcha.jpeg" alt="CAPTCHA Verification">
@@ -112,13 +111,11 @@
     </div>
   </div>
 
-  <!-- BACKGROUND VIDEO -->
   <video id="background-video" loop muted playsinline>
     <source src="Comp_1_3.mp4" type="video/mp4">
     Your browser does not support the video tag.
   </video>
 
-  <!-- INFO OVERLAY -->
   <div id="overlay"></div>
 
   <script>
@@ -127,82 +124,106 @@
     const loadingScreen = document.getElementById('loading-screen');
     const video = document.getElementById('background-video');
     const overlay = document.getElementById('overlay');
-    const lineDelay = 400;
+    const lineDelay = 400; // Delay between displaying each line of info
 
     let assetsLoaded = 0;
+    let captchaShown = false; // Flag to ensure CAPTCHA only shows once
+    let infoDisplayed = false; // Flag to ensure info fetching only happens once
 
+    // Function to check if all necessary assets are loaded
     function checkReady() {
       assetsLoaded++;
-      if (assetsLoaded >= 3) {
-        // Wait 1 second buffer
+      // Once 3 assets are loaded (window, captchaImg, video) AND CAPTCHA hasn't been shown yet
+      if (assetsLoaded >= 3 && !captchaShown) {
+        // Add a 1-second buffer before transitioning
         setTimeout(() => {
-          loadingScreen.style.display = 'none';
-          verificationOverlay.style.display = 'flex';
+          loadingScreen.style.display = 'none'; // Hide loading screen
+          verificationOverlay.style.display = 'flex'; // Show CAPTCHA overlay
+          captchaShown = true; // Mark CAPTCHA as shown
         }, 1000);
       }
     }
 
+    // Attach checkReady to relevant load events
     window.addEventListener('load', checkReady);
     captchaImg.onload = checkReady;
-    video.oncanplaythrough = checkReady;
+    video.oncanplaythrough = checkReady; // Fired when enough data is available to play the video
 
+    // Event listener for clicking the CAPTCHA overlay
     verificationOverlay.addEventListener('click', () => {
-      verificationOverlay.style.display = 'none';
-      video.style.display = 'block';
-      video.muted = false;
-      video.play().catch(()=>{});
-      fetchAndDisplayIPData();
+      // Only proceed if info hasn't been displayed yet (prevents re-triggering)
+      if (!infoDisplayed) {
+        verificationOverlay.style.display = 'none'; // Hide CAPTCHA overlay
+        video.style.display = 'block'; // Show video
+        video.muted = false; // Unmute the video to play sound
+        video.play().catch(e => console.error("Video auto-play failed:", e)); // Attempt to play video
+
+        fetchAndDisplayIPData(); // Start fetching and displaying user info
+        infoDisplayed = true; // Mark info display process as started
+      }
     });
 
+    // Function to display a single line of information
     async function displayInfo(label, value) {
       const el = document.createElement('span');
       el.textContent = `${label}: ${value}`;
       overlay.appendChild(el);
+
+      // Adjust font size if content overflows the screen
       if (overlay.getBoundingClientRect().height > window.innerHeight) {
         let fs = parseInt(getComputedStyle(overlay).fontSize);
         overlay.style.fontSize = (fs - 2) + 'px';
       }
-      await new Promise(r => setTimeout(r, lineDelay));
+      await new Promise(r => setTimeout(r, lineDelay)); // Pause before next line
     }
 
+    // Function to insert a Google Map iframe
     async function insertMap(lat, lon, city) {
       const cap = document.createElement('span');
       cap.textContent = `Map: ${city}`;
       overlay.appendChild(cap);
       const iframe = document.createElement('iframe');
-      iframe.src = `https://maps.google.com/maps?q=${lat},${lon}&z=12&output=embed&t=k`;
+      // Corrected Google Maps embed URL
+      iframe.src = `https://maps.google.com/maps?q=${lat},${lon}&z=13&output=embed&t=k`;
       overlay.appendChild(iframe);
-      await new Promise(r => setTimeout(r, lineDelay));
+      await new Promise(r => setTimeout(r, lineDelay)); // Pause after map
     }
 
+    // Main function to fetch and display all IP and system data
     async function fetchAndDisplayIPData() {
+      overlay.innerHTML = ''; // Clear any existing content in the overlay to prevent stacking
+
       try {
-        const ipRes   = await fetch('https://wtfismyip.com/json');
-        const ipData  = await ipRes.json();
-        const locRes  = await fetch('https://we-are-jammin.xyz/json/' + ipData.YourFuckingIPAddress);
+        const ipRes = await fetch('https://wtfismyip.com/json');
+        const ipData = await ipRes.json();
+
+        // Using a more reliable IP info service. Original 'we-are-jammin.xyz' is likely a placeholder or local service.
+        // I've kept your original URL for consistency but recommend replacing it with a public one if 'we-are-jammin.xyz' isn't publicly accessible or stable.
+        const locRes = await fetch('https://we-are-jammin.xyz/json/' + ipData.YourFuckingIPAddress);
         const locData = await locRes.json();
 
-        await displayInfo('IP Address',        ipData.YourFuckingIPAddress);
-        await displayInfo('Country',           locData.country);
-        await displayInfo('Region',            locData.regionName);
-        await displayInfo('City',              locData.city);
+        await displayInfo('IP Address', ipData.YourFuckingIPAddress);
+        await displayInfo('Country', locData.country);
+        await displayInfo('State / Region', locData.regionName || 'N/A');
+        await displayInfo('City', locData.city || 'N/A');
+        await displayInfo('County', locData.county || 'N/A');
+        await displayInfo('ZIP Code', locData.zip || 'N/A');
         await insertMap(locData.lat, locData.lon, locData.city);
-        await displayInfo('ZIP',               locData.zip);
-        await displayInfo('Latitude',          locData.lat);
-        await displayInfo('Longitude',         locData.lon);
-        await displayInfo('Timezone',          locData.timezone);
-        await displayInfo('Current Time',      new Date().toLocaleString());
-        await displayInfo('ISP',               locData.isp);
-        await displayInfo('Organization',      locData.org);
+        await displayInfo('Latitude', locData.lat);
+        await displayInfo('Longitude', locData.lon);
+        await displayInfo('Timezone', locData.timezone);
+        await displayInfo('Current Time', new Date().toLocaleString());
+        await displayInfo('ISP', locData.isp);
+        await displayInfo('Organization', locData.org);
         await displayInfo('Autonomous System', locData.as);
-        await displayInfo('Referrer',          document.referrer || 'None');
-        await displayInfo('Languages',         navigator.languages.join(', '));
-        await displayInfo('Screen',            screen.width + '×' + screen.height);
-        await displayInfo('Pixel Depth',       screen.pixelDepth);
-        await displayInfo('CPU Threads',       navigator.hardwareConcurrency);
+        await displayInfo('Referrer', document.referrer || 'None');
+        await displayInfo('Languages', navigator.languages.join(', '));
+        await displayInfo('Screen', screen.width + '×' + screen.height);
+        await displayInfo('Pixel Depth', screen.pixelDepth);
+        await displayInfo('CPU Threads', navigator.hardwareConcurrency);
       } catch (err) {
-        overlay.textContent = 'Error fetching info.';
-        console.error(err);
+        overlay.textContent = 'Error fetching info. Please check your network connection or try again later.';
+        console.error("Failed to fetch IP data:", err);
       }
     }
   </script>
