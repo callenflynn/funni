@@ -111,7 +111,7 @@
     </div>
   </div>
 
-  <video id="background-video" loop muted playsinline>
+  <video id="background-video" loop muted playsinline preload="none">
     <source src="Comp_1_3.mp4" type="video/mp4">
     Your browser does not support the video tag.
   </video>
@@ -126,28 +126,26 @@
     const overlay = document.getElementById('overlay');
     const lineDelay = 400; // Delay between displaying each line of info
 
-    let assetsLoaded = 0;
     let captchaShown = false; // Flag to ensure CAPTCHA only shows once
     let infoDisplayed = false; // Flag to ensure info fetching only happens once
 
-    // Function to check if all necessary assets are loaded
-    function checkReady() {
-      assetsLoaded++;
-      // Once 3 assets are loaded (window, captchaImg, video) AND CAPTCHA hasn't been shown yet
-      if (assetsLoaded >= 3 && !captchaShown) {
-        // Add a 1-second buffer before transitioning
-        setTimeout(() => {
-          loadingScreen.style.display = 'none'; // Hide loading screen
-          verificationOverlay.style.display = 'flex'; // Show CAPTCHA overlay
-          captchaShown = true; // Mark CAPTCHA as shown
-        }, 1000);
-      }
+    // The verification image is the only asset needed before showing the page.
+    // Do not wait for the background video: mobile browsers may defer it or never
+    // fire canplaythrough for a video that is hidden.
+    function showVerification() {
+      if (captchaShown) return;
+      captchaShown = true;
+      setTimeout(() => {
+        loadingScreen.style.display = 'none';
+        verificationOverlay.style.display = 'flex';
+      }, 1000);
     }
 
-    // Attach checkReady to relevant load events
-    window.addEventListener('load', checkReady);
-    captchaImg.onload = checkReady;
-    video.oncanplaythrough = checkReady; // Fired when enough data is available to play the video
+    captchaImg.addEventListener('load', showVerification, { once: true });
+    captchaImg.addEventListener('error', showVerification, { once: true });
+    // Handle cached images and recover if the image request never settles.
+    if (captchaImg.complete) showVerification();
+    setTimeout(showVerification, 4000);
 
     // Event listener for clicking the CAPTCHA overlay
     verificationOverlay.addEventListener('click', () => {
